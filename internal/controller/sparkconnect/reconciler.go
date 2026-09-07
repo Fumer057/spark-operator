@@ -64,6 +64,12 @@ type Options struct {
 	// server pod when neither the SparkConnect nor its server pod template specifies one.
 	// An empty value disables the fallback.
 	DefaultServiceAccount string
+
+	// DefaultPodLabels are the labels injected globally into every Spark driver and executor pod.
+	DefaultPodLabels map[string]string
+
+	// DefaultPodAnnotations are the annotations injected globally into every Spark driver and executor pod.
+	DefaultPodAnnotations map[string]string
 }
 
 // Reconciler reconciles a SparkConnect object.
@@ -362,6 +368,29 @@ func (r *Reconciler) mutateServerPod(ctx context.Context, conn *v1alpha1.SparkCo
 			pod.Spec.ServiceAccountName = r.options.DefaultServiceAccount
 			ctrl.LoggerFrom(ctx).Info("Applied default service account to Spark Connect server pod",
 				"serviceAccount", r.options.DefaultServiceAccount)
+		}
+
+		// Apply operator-level default pod labels and annotations.
+		if len(r.options.DefaultPodLabels) > 0 {
+			if pod.Labels == nil {
+				pod.Labels = make(map[string]string)
+			}
+			for k, v := range r.options.DefaultPodLabels {
+				if _, exists := pod.Labels[k]; !exists {
+					pod.Labels[k] = v
+				}
+			}
+		}
+
+		if len(r.options.DefaultPodAnnotations) > 0 {
+			if pod.Annotations == nil {
+				pod.Annotations = make(map[string]string)
+			}
+			for k, v := range r.options.DefaultPodAnnotations {
+				if _, exists := pod.Annotations[k]; !exists {
+					pod.Annotations[k] = v
+				}
+			}
 		}
 
 		// Add a default server container if not specified.
